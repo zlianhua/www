@@ -146,13 +146,13 @@ select GetPromoCardTypeStream.messageId, GetPromoCardTypeStream.promoCardId, Get
 insert into GetPromoCardTypeDetailsStream;
 
 @info(name='get-promocard-rules')
-from GetPromoCardTypeDetailsStream#window.length(1) right outer join PromoRule on GetPromoCardTypeDetailsStream.promoCardTypeId==PromoRule.promoCardTypeId
+from GetPromoCardTypeDetailsStream#window.length(1) left outer join PromoRule on GetPromoCardTypeDetailsStream.promoCardTypeId==PromoRule.promoCardTypeId
 select GetPromoCardTypeDetailsStream.messageId, GetPromoCardTypeDetailsStream.promoCardId, GetPromoCardTypeDetailsStream.promoCardTypeId, GetPromoCardTypeDetailsStream.amount, GetPromoCardTypeDetailsStream.promoCardTypeDiscount, PromoRule.promoRuleId, PromoRule.promoRule, GetPromoCardTypeDetailsStream.promoCardIssueDate
 insert into RuleStream;
 
 @info(name='execute-promocard-rules')
 from RuleStream#window.length(1)
-select RuleStream.messageId, RuleStream.promoCardTypeDiscount, js:eval(str:fillTemplate(RuleStream.promoRule, map:create("amount", RuleStream.amount, "cardPeriod", time:dateDiff(time:currentDate(), RuleStream.promoCardIssueDate, 'yyyy-MM-dd', 'yyyy-MM-dd'))), 'bool') as result
+select RuleStream.messageId, RuleStream.promoCardTypeDiscount, ifThenElse(RuleStream.promoRule is null,false,js:eval(str:fillTemplate(RuleStream.promoRule, map:create("amount", RuleStream.amount, "cardPeriod", time:dateDiff(time:currentDate(), RuleStream.promoCardIssueDate, 'yyyy-MM-dd', 'yyyy-MM-dd'))), 'bool')) as result
 insert into RuleReslutsStream;
 
 -- Output results
